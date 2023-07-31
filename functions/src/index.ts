@@ -8,9 +8,12 @@
  */
 import { onRequest } from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
+import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from "firebase-admin/firestore";
 import * as cryptoapis from "./cryptoapis";
 import * as dayjs from "dayjs";
+
+initializeApp()
 
 const db = getFirestore();
 
