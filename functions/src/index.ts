@@ -23,12 +23,8 @@ const MEMBERSHIP_PRICE = 177; //usd
  */
 export const createPaymentAddress = onRequest(async (request, response) => {
   if (request.method == "POST") {
-    const res = await cryptoapis.createWalletAddress();
-    logger.info("Response", JSON.stringify(res));
-
-    const resCallback = await cryptoapis.createCallbackConfirmation(
-      request.body.userId,
-      res.data.item.address
+    const resCallback: any = await cryptoapis.createCallbackConfirmation(
+      request.body.userId
     );
     logger.info("Response", JSON.stringify(resCallback));
 
@@ -36,12 +32,12 @@ export const createPaymentAddress = onRequest(async (request, response) => {
     const amount = exchange_rate.data.item.rate * MEMBERSHIP_PRICE;
 
     const payment_link = {
-      address: res.data.item.address,
-      qr: `https://chart.googleapis.com/chart?chs=150x150&amp;cht=qr&amp;chl=${res.data.item.address};choe=UTF-8`,
+      referenceId: resCallback.data.item.referenceId,
+      qr: `https://chart.googleapis.com/chart?chs=150x150&amp;cht=qr&amp;chl=${cryptoapis.addressWallet};choe=UTF-8`,
       status: "pending",
       created_at: new Date(),
       amount,
-      currency: "btc",
+      currency: "BTC",
       exchange_rate: exchange_rate.data.item,
     };
 
@@ -54,7 +50,7 @@ export const createPaymentAddress = onRequest(async (request, response) => {
       }
     );
     response.send({
-      address: payment_link.address,
+      address: cryptoapis.addressWallet,
       amount: payment_link.amount,
       currency: payment_link.currency,
       qr: payment_link.qr,
@@ -67,7 +63,7 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
     if (request.body.data.event == "ADDRESS_COINS_TRANSACTION_CONFIRMED") {
       const snap = await db
         .collection("users")
-        .where("payment_link.address", "==", request.body.data.item.address)
+        .where("payment_link.referenceId", "==", request.body.referenceId)
         .get();
 
       if (snap.docs[0]) {

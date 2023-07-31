@@ -3,7 +3,7 @@ const https = require('https')
 const walletId = '64c6dd54aa48640007b8e26f'
 const blockchain = 'bitcoin'
 const network = 'testnet'
-const addressWallet = 'tb1qumn3su2rsljwqkclgn70f7wn6lrclun0ytv7w6'
+export const addressWallet = 'tb1qumn3su2rsljwqkclgn70f7wn6lrclun0ytv7w6'
 const hostapi = 'http://127.0.0.1:5001/topx-academy/us-central1'
 
 const apiSecretKey = '0e5cdffb-0e64-404b-b0f4-aa1927c7de73'
@@ -81,7 +81,7 @@ export const createWalletAddress = (): Promise<any> => {
     })
 }
 
-export const createCallbackConfirmation = (userId: string, addressId: string) => {
+export const createCallbackConfirmation = (userId: string) => {
     return new Promise((resolve, reject) => {
         const options = {
             "method": "POST",
@@ -95,8 +95,8 @@ export const createCallbackConfirmation = (userId: string, addressId: string) =>
             "context": "yourExampleString",
             "data": {
                 "item": {
-                    "address": addressId,
-                    "allowDuplicates": false,
+                    "address": addressWallet,
+                    "allowDuplicates": true,
                     "callbackSecretKey": apiSecretKey,
                     "callbackUrl": `${hostapi}/onConfirmedTransaction`,
                     "receiveCallbackOn": 3
