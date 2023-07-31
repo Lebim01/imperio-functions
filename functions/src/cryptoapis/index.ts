@@ -107,6 +107,20 @@ export const createCallbackConfirmation = (userId: string) => {
     })
 }
 
+export const removeCallbackConfirmation = (refereceId: string) => {
+    return new Promise((resolve, reject) => {
+        const options = {
+            "method": "DELETE",
+            "path": `/v2/blockchain-events/${blockchain}/${network}/subscriptions/${refereceId}`,
+            ...defaultOptions,
+        };
+
+        const req = https.request(options, streamResponse(resolve, reject));
+        req.write(JSON.stringify([]));
+        req.end();
+    })
+}
+
 export const getExchangeRate = (fromSymbol: string, toSymbol: string) => {
     return new Promise((resolve, reject) => {
         const options = {

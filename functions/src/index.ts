@@ -74,6 +74,7 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
           data.payment_link.amount == request.body.data.item.amount &&
           request.body.data.item.unit?.toUpperCase() == "BTC"
         ) {
+          await cryptoapis.removeCallbackConfirmation(request.body.refereceId);
           await db.collection(`users/${doc.id}/transactions`).add({
             ...request.body,
             created_at: new Date(),
