@@ -2,7 +2,7 @@ import * as logger from "firebase-functions/logger";
 import functions = require("firebase-functions");
 import moment = require("moment-timezone");
 import { getFirestore } from "firebase-admin/firestore";
-//import { v4 } from 'uuid';
+//import { v4 as uuidv4 } from 'uuid';
 
 const db = getFirestore()
 
@@ -56,7 +56,7 @@ exports.onCreateLesson = functions.firestore
 
       countLesson()
     } catch (e) {
-      functions.logger.log("No se asignaron los datos", e);
+      functions.logger.log("No se asignaron los datoss", e);
     }
   });
 
@@ -81,6 +81,6 @@ exports.onUpdateLesson = functions.firestore
         functions.logger.log("no se crearon los campos", e);
       }
     } catch (e) {
-      functions.logger.log("No se asignaron los datos", e);
+      functions.logger.log("No se asignaron los datoss", e);
     }
   });

@@ -2,23 +2,25 @@ import * as logger from "firebase-functions/logger";
 import functions = require("firebase-functions");
 import moment = require("moment-timezone");
 import { getFirestore } from "firebase-admin/firestore";
-//import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
+
 
 const db = getFirestore()
 
-exports.onCreateCategory = functions.firestore.document('categories/{documentId}').onCreate(async (snapshot, context) => {
+exports.onCreateUser = functions.firestore.document('users/{documentId}').onCreate(async (snapshot, context) => {
     try {
         const documentId = context.params.documentId;
        // const data = snapshot.data();
         const newData = {
             created_at: moment().format('YYYY-MM-DD HH:mm:ss'),
             updated_at: moment().format('YYYY-MM-DD HH:mm:ss'),
-            count_courses: 0,
-            highlight: 0,
-            count_views: 0,
+            left: uuidv4(),
+            right: uuidv4(),
+            balance: 0,
         }
         try {
-            await db.collection('categories').doc(documentId).update(newData);
+            await db.collection('users').doc(documentId).update(newData);
+            
         } catch (e) {
             logger.info("no se crearon los campos", e)
         }
@@ -26,11 +28,11 @@ exports.onCreateCategory = functions.firestore.document('categories/{documentId}
        
 
     } catch (e) {
-        logger.info("No se asignaron los datoss", e)
+        logger.info("No se asignaron los datos", e)
     }
 })
 
-exports.onUpdateCategory = functions.firestore.document('categories/{documentId}').onUpdate(async (snapshot, context) => {
+exports.onUpdateUser = functions.firestore.document('users/{documentId}').onUpdate(async (snapshot, context) => {
     try {
         const documentId = context.params.documentId;
        // const data = snapshot.after.data();
@@ -38,11 +40,11 @@ exports.onUpdateCategory = functions.firestore.document('categories/{documentId}
             updated_at: moment().format('YYYY-MM-DD HH:mm:ss'),
         }
         try {
-            await db.collection('categories').doc(documentId).update(newUpdateDate);
+            await db.collection('users').doc(documentId).update(newUpdateDate);
         } catch (e) {
             logger.info("no se crearon los campos", e)
         }
     } catch (e) {
-      logger.info("No se asignaron los datoss", e);
+      logger.info("No se asignaron los datos", e);
     }
   });

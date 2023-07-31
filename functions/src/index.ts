@@ -108,4 +108,5 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
 
 exports.courses = require('./courses/index')
 exports.lessons = require('./lessons/index')
-exports.lessons = require('./categories/index')
+exports.categories = require('./categories/index')
+exports.users = require('./users/index')
