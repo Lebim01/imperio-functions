@@ -1,7 +1,7 @@
 import * as logger from "firebase-functions/logger";
 import functions = require("firebase-functions");
-import moment = require("moment-timezone");
 import { getFirestore } from "firebase-admin/firestore";
+import _ = require("lodash");
 //import { v4 as uuidv4 } from 'uuid';
 
 const db = getFirestore()
@@ -11,8 +11,8 @@ exports.onCreateCategory = functions.firestore.document('categories/{documentId}
         const documentId = context.params.documentId;
        // const data = snapshot.data();
         const newData = {
-            created_at: moment().format('YYYY-MM-DD HH:mm:ss'),
-            updated_at: moment().format('YYYY-MM-DD HH:mm:ss'),
+            created_at: new Date(),
+            updated_at: new Date(),
             count_courses: 0,
             highlight: 0,
             count_views: 0,
@@ -31,11 +31,21 @@ exports.onCreateCategory = functions.firestore.document('categories/{documentId}
 })
 
 exports.onUpdateCategory = functions.firestore.document('categories/{documentId}').onUpdate(async (snapshot, context) => {
+    const excludeFields = (obj: any) => {
+        const { updated_at, ...rest } = obj
+        return rest
+      }
     try {
         const documentId = context.params.documentId;
-       // const data = snapshot.after.data();
+        const beforeData = excludeFields(snapshot.before.data());
+        const afterData = excludeFields(snapshot.after.data());
+  
+        if(_.isEqual(beforeData, afterData)){
+          return;
+        }
+  
         const newUpdateDate = {       
-            updated_at: moment().format('YYYY-MM-DD HH:mm:ss'),
+            updated_at: new Date(),
         }
         try {
             await db.collection('categories').doc(documentId).update(newUpdateDate);

@@ -1,7 +1,7 @@
 import * as logger from "firebase-functions/logger";
 import functions = require("firebase-functions");
-import moment = require("moment-timezone");
 import { getFirestore } from "firebase-admin/firestore";
+import _ = require("lodash");
 //import { v4 as uuidv4 } from 'uuid';
 
 const db = getFirestore();
@@ -14,8 +14,8 @@ exports.onCreateLesson = functions.firestore
       const lessonId = context.params.lessonId;
       //const data = snapshot.data();
       const newData = {
-        created_at: moment().format("YYYY-MM-DD HH:mm:ss"),
-        updated_at: moment().format("YYYY-MM-DD HH:mm:ss"),
+        created_at: new Date(),
+        updated_at: new Date(),
         count_likes: 0,
         count_views: 0,
       };
@@ -63,12 +63,22 @@ exports.onCreateLesson = functions.firestore
 exports.onUpdateLesson = functions.firestore
   .document("courses/{courseId}/lessons/{lessonId}")
   .onUpdate(async (snapshot, context) => {
+    const excludeFields = (obj: any) => {
+      const { updated_at, ...rest } = obj
+      return rest
+    }
     try {
       const courseId = context.params.courseId;
       const lessonId = context.params.lessonId;
-      //const data = snapshot.after.data();
+      const beforeData = excludeFields(snapshot.before.data());
+      const afterData = excludeFields(snapshot.after.data());
+
+      if(_.isEqual(beforeData, afterData)){
+        return;
+      }
+
       const newUpdateDate = {
-        updated_at: moment().format("YYYY-MM-DD HH:mm:ss"),
+        updated_at: new Date(),
       };
       try {
         await db
