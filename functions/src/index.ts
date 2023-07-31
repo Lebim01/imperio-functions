@@ -16,7 +16,12 @@ const db = getFirestore();
 
 const MEMBERSHIP_PRICE = 177; //usd
 
-export const createAddress = onRequest(async (request, response) => {
+/**
+ * payload {
+ *   userId: string
+ * }
+ */
+export const createPaymentAddress = onRequest(async (request, response) => {
   if (request.method == "POST") {
     const res = await cryptoapis.createWalletAddress();
     logger.info("Response", JSON.stringify(res));
