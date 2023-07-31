@@ -96,13 +96,27 @@ export const createCallbackConfirmation = (userId: string, addressId: string) =>
             "data": {
                 "item": {
                     "address": addressId,
-                    "allowDuplicates": true,
+                    "allowDuplicates": false,
                     "callbackSecretKey": apiSecretKey,
                     "callbackUrl": `${hostapi}/onConfirmedTransaction`,
                     "receiveCallbackOn": 3
                 }
             }
         }));
+        req.end();
+    })
+}
+
+export const getExchangeRate = (fromSymbol: string, toSymbol: string) => {
+    return new Promise((resolve, reject) => {
+        const options = {
+            "method": "GET",
+            "path": `/v2/market-data/exchange-rates/by-symbols/${fromSymbol}/${toSymbol}`,
+            "qs": {"context":"yourExampleString", "calculationTimestamp": new Date().getTime()},
+            ...defaultOptions,
+        };
+
+        const req = https.request(options, streamResponse(resolve, reject));
         req.end();
     })
 }

@@ -10,20 +10,11 @@ import { onRequest } from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 import { getFirestore } from "firebase-admin/firestore";
 import * as cryptoapis from "./cryptoapis";
+import * as dayjs from "dayjs";
 
 const db = getFirestore();
 
-export const getBalance = onRequest(async (request, response) => {
-  const res = await cryptoapis.getAddressBalance();
-  logger.info("Response", JSON.stringify(res));
-  response.send(res);
-});
-
-export const getListDepositAddress = onRequest(async (request, response) => {
-  const res = await cryptoapis.getListDepositAddress();
-  logger.info("Response", JSON.stringify(res));
-  response.send(res);
-});
+const MEMBERSHIP_PRICE = 177; //usd
 
 export const createAddress = onRequest(async (request, response) => {
   if (request.method == "POST") {
@@ -36,20 +27,33 @@ export const createAddress = onRequest(async (request, response) => {
     );
     logger.info("Response", JSON.stringify(resCallback));
 
+    const exchange_rate: any = await cryptoapis.getExchangeRate("usd", "btc");
+    const amount = exchange_rate.data.item.rate * MEMBERSHIP_PRICE;
+
+    const payment_link = {
+      address: res.data.item.address,
+      qr: `https://chart.googleapis.com/chart?chs=150x150&amp;cht=qr&amp;chl=${res.data.item.address};choe=UTF-8`,
+      status: "pending",
+      created_at: new Date(),
+      amount,
+      currency: "btc",
+      exchange_rate: exchange_rate.data.item,
+    };
+
     await db.doc(`users/${request.body.userId}`).set(
       {
-        payment_link: {
-          address: res.data.item.address,
-          qr: `https://chart.googleapis.com/chart?chs=150x150&amp;cht=qr&amp;chl=${res.data.item.address};choe=UTF-8`,
-          status: "pending",
-          created_at: new Date(),
-        },
+        payment_link,
       },
       {
         merge: true,
       }
     );
-    response.send(res);
+    response.send({
+      address: payment_link.address,
+      amount: payment_link.amount,
+      currency: payment_link.currency,
+      qr: payment_link.qr,
+    });
   }
 });
 
@@ -62,9 +66,36 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
         .get();
 
       if (snap.docs[0]) {
-        const doc = snap.docs[0]
-        await db.collection(`users/${doc.id}/transactions`).add(request.body)
+        const doc = snap.docs[0];
+        const data = doc.data();
+
+        if (
+          data.payment_link.amount == request.body.data.item.amount &&
+          request.body.data.item.unit?.toUpperCase() == "BTC"
+        ) {
+          await db.collection(`users/${doc.id}/transactions`).add({
+            ...request.body,
+            created_at: new Date(),
+          });
+          await doc.ref.set(
+            {
+              payment_link: {},
+              subscription_status: "paid",
+              subscription_expires_at: dayjs().add(28, "days").toDate(),
+            },
+            {
+              merge: true,
+            }
+          );
+          response.status(200).send(true);
+        } else {
+          response.status(400).send(false);
+        }
+      } else {
+        response.status(400).send(false);
       }
+    } else {
+      response.status(200).send(true);
     }
   }
 });
