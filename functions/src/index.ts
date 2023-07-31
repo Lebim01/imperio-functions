@@ -7,6 +7,7 @@
  * See a full list of supported triggers at https://firebase.google.com/docs/functions
  */
 import { onRequest } from "firebase-functions/v2/https";
+import { setGlobalOptions } from 'firebase-functions/v2'
 import * as logger from "firebase-functions/logger";
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from "firebase-admin/firestore";
@@ -14,6 +15,8 @@ import * as cryptoapis from "./cryptoapis";
 import * as dayjs from "dayjs";
 
 initializeApp()
+
+setGlobalOptions({maxInstances: 10})
 
 const db = getFirestore();
 

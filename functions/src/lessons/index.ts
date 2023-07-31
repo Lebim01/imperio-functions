@@ -4,7 +4,7 @@ import moment = require("moment-timezone");
 import { getFirestore } from "firebase-admin/firestore";
 //import { v4 as uuidv4 } from 'uuid';
 
-const db = getFirestore()
+const db = getFirestore();
 
 exports.onCreateLesson = functions.firestore
   .document("courses/{courseId}/lessons/{lessonId}")
@@ -30,31 +30,31 @@ exports.onCreateLesson = functions.firestore
         functions.logger.log("no se crearon los campos", e);
       }
 
-       function countLesson () {
+      function countLesson() {
         try {
-             const docRef = db.collection('courses').doc(courseId)
-             docRef.get().then(d => {
-                if (d.exists) {
-                    const data = d.data()
-                    let lesson = data?.count_lesson;
-                    lesson++
-                    try {
-                        db.collection('courses').doc(courseId).update({
-                            count_lesson: lesson
-                        })
-                    } catch (e) {
-                        logger.info("fallo al actualizar el contador", e)
-                    }
-                } else {
-                    logger.info("no se encuentra")
-                }
-             })
+          const docRef = db.collection("courses").doc(courseId);
+          docRef.get().then((d) => {
+            if (d.exists) {
+              const data = d.data();
+              let lesson = data?.count_lesson;
+              lesson++;
+              try {
+                db.collection("courses").doc(courseId).update({
+                  count_lesson: lesson,
+                });
+              } catch (e) {
+                logger.info("fallo al actualizar el contador", e);
+              }
+            } else {
+              logger.info("no se encuentra");
+            }
+          });
         } catch (e) {
-            functions.logger.log("fallo al obtener los datos", e)
+          functions.logger.log("fallo al obtener los datos", e);
         }
       }
 
-      countLesson()
+      countLesson();
     } catch (e) {
       functions.logger.log("No se asignaron los datoss", e);
     }
