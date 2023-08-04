@@ -2,12 +2,12 @@ import * as logger from "firebase-functions/logger";
 import functions = require("firebase-functions");
 import { v4 as uuidv4 } from "uuid";
 import _ = require("lodash");
-import { onRequest } from "firebase-functions/v2/https";
-import { execUserDirectBond } from "../utils/Functions";
+import {
+  calculatePositionOfBinary,
+} from "../utils/Functions";
 import { getFirestore } from "firebase-admin/firestore";
-import { Counter } from "../utils/Counter";
 
-const db = getFirestore()
+const db = getFirestore();
 
 exports.onCreateUser = functions.firestore
   .document("users/{documentId}")
@@ -15,6 +15,11 @@ exports.onCreateUser = functions.firestore
     try {
       const documentId = context.params.documentId;
       const data = snapshot.data();
+
+      const binaryPosition = await calculatePositionOfBinary(
+        data.sponsor_id,
+        data.position
+      );
       const newData = {
         created_at: new Date(),
         updated_at: new Date(),
@@ -22,12 +27,24 @@ exports.onCreateUser = functions.firestore
         right: uuidv4(),
         balance: 0,
         left_points: 0,
-        right_points: 0
+        right_points: 0,
+        count_underline_people: 0,
+        left_binary_user_id: null,
+        right_binary_user_id: null,
+        parent_binary_user_id: binaryPosition.parent_id,
       };
 
-      if(data.sponsor_id && data.position){
-        const counter = new Counter(db.doc('users/' + data.sponsor_id), data.position + "_points")
-        await counter.incrementBy(100)
+      try {
+        await db
+          .collection("users")
+          .doc(binaryPosition.parent_id)
+          .update(
+            data.position == "left"
+              ? { left_binary_user_id: documentId }
+              : { right_binary_user_id: documentId }
+          );
+      } catch (e) {
+        logger.info("no se pudo actualizar el binario derrame", e);
       }
 
       try {
@@ -66,10 +83,3 @@ exports.onUpdateUser = functions.firestore
       logger.info("No se asignaron los datos", e);
     }
   });
-
-exports.execUserDirectBond = onRequest(async (request, response) => {
-  if(request.method == "POST"){
-    await execUserDirectBond(request.body.sponsorId)
-    response.send("ok")
-  }
-})

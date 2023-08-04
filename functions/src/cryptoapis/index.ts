@@ -1,12 +1,12 @@
+import axios from "axios"
+
 const https = require('https')
 
-const walletId = '64c6dd54aa48640007b8e26f'
+const walletId = '64cbde4178ffd80007affa0f'
 const blockchain = 'bitcoin'
-const network = 'testnet'
-export const addressWallet = 'tb1qumn3su2rsljwqkclgn70f7wn6lrclun0ytv7w6'
-const hostapi = 'http://127.0.0.1:5001/topx-academy/us-central1'
-
-const apiSecretKey = '0e5cdffb-0e64-404b-b0f4-aa1927c7de73'
+const network = 'mainnet'
+const hostapi = 'https://topx-academy-nest.vercel.app'
+export const walletAddress = 'bc1qtmequmd3ead58aystxczt4sgc4v32np3kfk93v'
 
 const defaultOptions = {
     "hostname": "rest.cryptoapis.io",
@@ -31,11 +31,15 @@ const streamResponse = (resolve: any, reject: any) => (res: any) => {
     res.on('error', reject)
 }
 
+export const getBTCExchange = (amount: number) => {
+    return axios.get('https://blockchain.info/tobtc?currency=USD&value=' + amount).then(r => r.data)
+}
+
 export const getAddressBalance = () => {
     return new Promise((resolve, reject) => {
         const options = {
             "method": "GET",
-            "path": `/v2/blockchain-data/${blockchain}/${network}/addresses/${addressWallet}/balance`,
+            "path": `/v2/blockchain-data/${blockchain}/${network}/addresses/${walletAddress}/balance`,
             "qs": {"context":"yourExampleString"},
             ...defaultOptions,
         };
@@ -81,7 +85,7 @@ export const createWalletAddress = (): Promise<any> => {
     })
 }
 
-export const createCallbackConfirmation = (userId: string) => {
+export const createCallbackConfirmation = (userId: string, address: string) => {
     return new Promise((resolve, reject) => {
         const options = {
             "method": "POST",
@@ -95,10 +99,10 @@ export const createCallbackConfirmation = (userId: string) => {
             "context": "yourExampleString",
             "data": {
                 "item": {
-                    "address": addressWallet,
+                    "address": address,
                     "allowDuplicates": true,
-                    "callbackSecretKey": apiSecretKey,
-                    "callbackUrl": `${hostapi}/onConfirmedTransaction`,
+                    "callbackSecretKey": "123-4",
+                    "callbackUrl": `${hostapi}/callbackPayment`,
                     "receiveCallbackOn": 3
                 }
             }
