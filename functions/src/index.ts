@@ -27,17 +27,19 @@ export const createPaymentAddress = onRequest(async (request, response) => {
     
     if(!userData.payment_link){
       const resWallet = await cryptoapis.createWalletAddress();
+      logger.log(resWallet)
       address = resWallet.data.item.address;
 
       const resCallback: any = await cryptoapis.createCallbackConfirmation(
         userId,
         address
       );
+      logger.log(resCallback)
 
       referenceId = resCallback.data.item.referenceId
     }else{
       address = userData.payment_link.address
-      referenceId = userData.payment_link.refereceId
+      referenceId = userData.payment_link.referenceId
     }
 
     const amount: any = await cryptoapis.getBTCExchange(177);
@@ -74,8 +76,7 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
       request.body.data.event == "ADDRESS_COINS_TRANSACTION_CONFIRMED" &&
       request.body.data.item.network == "mainnet" &&
       request.body.data.item.direction == "incoming" &&
-      request.body.data.item.unit == "BTC" &&
-      request.body.daat.item.address == cryptoapis.walletAddress
+      request.body.data.item.unit == "BTC"
     ) {
       const snap = await db
         .collection("users")
@@ -86,49 +87,75 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
         const doc = snap.docs[0];
         const data = doc.data();
 
-        // data.payment_link.amount == request.body.data.item.amount
+        if(data.payment_link.amount == request.body.data.item.amount){
 
-        await cryptoapis.removeCallbackConfirmation(request.body.refereceId);
-        await db.collection(`users/${doc.id}/transactions`).add({
-          ...request.body,
-          created_at: new Date(),
-        });
+          const binaryPosition = await calculatePositionOfBinary(
+            data.sponsor_id,
+            data.position
+          );
 
-        if (data.sponsor_id) {
+          await doc.ref.update({
+            parent_binary_user_id: binaryPosition.parent_id
+          })
+
           try {
-            await increaseBinaryPoints(doc.id);
+            await db
+              .collection("users")
+              .doc(binaryPosition.parent_id)
+              .update(
+                data.position == "left"
+                  ? { left_binary_user_id: doc.id }
+                  : { right_binary_user_id: doc.id }
+              );
           } catch (e) {
-            logger.info("no se repartio el bono binario", e);
+            logger.info("no se pudo actualizar el binario derrame", e);
           }
+
+          await cryptoapis.removeCallbackConfirmation(request.body.refereceId);
+          await db.collection(`users/${doc.id}/transactions`).add({
+            ...request.body,
+            created_at: new Date(),
+          });
+
+          if (data.sponsor_id) {
+            try {
+              await increaseBinaryPoints(doc.id);
+            } catch (e) {
+              logger.info("no se repartio el bono binario", e);
+            }
+          }
+
+          if (data.sponsor_id && !data.subscription) {
+            try {
+              await execUserDirectBond(data.sponsor_id);
+            } catch (e) {
+              logger.info("no se repartio el bono directo", e);
+            }
+          }
+
+          await doc.ref.set(
+            {
+              payment_link: {},
+              subscription: "pro",
+              subscription_status: "paid",
+              subscription_expires_at: dayjs().add(28, "days").toDate(),
+            },
+            {
+              merge: true,
+            }
+          );
+
+          response.status(200).send(true);
+        } else {
+          logger.error(
+            "No se encontro el usuario para la transacción con referenceId: " +
+              request.body.referenceId
+          );
+          response.status(400).send(false);
         }
-
-        if (data.sponsor_id && !data.subscription) {
-          try {
-            await execUserDirectBond(data.sponsor_id);
-          } catch (e) {
-            logger.info("no se repartio el bono directo", e);
-          }
-        }
-
-        await doc.ref.set(
-          {
-            payment_link: {},
-            subscription: "pro",
-            subscription_status: "paid",
-            subscription_expires_at: dayjs().add(28, "days").toDate(),
-          },
-          {
-            merge: true,
-          }
-        );
-
-        response.status(200).send(true);
       } else {
-        logger.error(
-          "No se encontro el usuario para la transacción con referenceId: " +
-            request.body.referenceId
-        );
-        response.status(400).send(false);
+        logger.log("Cantidad incorrecta")
+        response.status(200).send(true);
       }
     } else {
       response.status(200).send(true);
@@ -220,4 +247,27 @@ const execUserDirectBond = async (sponsorId: string) => {
       }
     );
   }
+};
+
+const calculatePositionOfBinary = async (
+  sponsor_id: string,
+  position: "left" | "right"
+) => {
+  let parent_id = null;
+
+  let next_user_id = sponsor_id;
+  do {
+    const sponsorRef = db.doc("users/" + next_user_id);
+    const sponsorData = await sponsorRef.get().then((r) => r.data());
+
+    if (sponsorData[`${position}_binary_user_id`]) {
+      next_user_id = sponsorData[`${position}_binary_user_id`];
+    } else {
+      parent_id = sponsorRef.id;
+    }
+  } while (!parent_id);
+
+  return {
+    parent_id,
+  };
 };

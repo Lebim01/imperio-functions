@@ -103,7 +103,7 @@ export const createCallbackConfirmation = (userId: string, address: string) => {
                     "allowDuplicates": true,
                     "callbackSecretKey": "123-4",
                     "callbackUrl": `${hostapi}/callbackPayment`,
-                    "receiveCallbackOn": 3
+                    "receiveCallbackOn": 2
                 }
             }
         }));

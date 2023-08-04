@@ -1,10 +1,7 @@
 import * as logger from "firebase-functions/logger";
-import functions = require("firebase-functions");
+import * as functions from "firebase-functions";
 import { v4 as uuidv4 } from "uuid";
-import _ = require("lodash");
-import {
-  calculatePositionOfBinary,
-} from "../utils/Functions";
+import * as _ from "lodash";
 import { getFirestore } from "firebase-admin/firestore";
 
 const db = getFirestore();
@@ -14,12 +11,7 @@ exports.onCreateUser = functions.firestore
   .onCreate(async (snapshot, context) => {
     try {
       const documentId = context.params.documentId;
-      const data = snapshot.data();
-
-      const binaryPosition = await calculatePositionOfBinary(
-        data.sponsor_id,
-        data.position
-      );
+      
       const newData = {
         created_at: new Date(),
         updated_at: new Date(),
@@ -31,21 +23,8 @@ exports.onCreateUser = functions.firestore
         count_underline_people: 0,
         left_binary_user_id: null,
         right_binary_user_id: null,
-        parent_binary_user_id: binaryPosition.parent_id,
+        parent_binary_user_id: null,
       };
-
-      try {
-        await db
-          .collection("users")
-          .doc(binaryPosition.parent_id)
-          .update(
-            data.position == "left"
-              ? { left_binary_user_id: documentId }
-              : { right_binary_user_id: documentId }
-          );
-      } catch (e) {
-        logger.info("no se pudo actualizar el binario derrame", e);
-      }
 
       try {
         await db.collection("users").doc(documentId).update(newData);
