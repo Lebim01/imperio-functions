@@ -36,6 +36,12 @@ export const createPaymentAddress = onRequest(async (request, response) => {
       );
       logger.log(resCallback)
 
+      const resConfirmation: any = await cryptoapis.createCallbackFirstConfirmation(
+        userId,
+        address
+      )
+      logger.log(resConfirmation)
+
       referenceId = resCallback.data.item.referenceId
     }else{
       address = userData.payment_link.address
@@ -65,6 +71,43 @@ export const createPaymentAddress = onRequest(async (request, response) => {
       currency: payment_link.currency,
       qr: payment_link.qr,
     });
+  }
+});
+
+export const onConfirmedCoins = onRequest(async (request, response) => {
+  logger.log(request.body);
+
+  if (request.method == "POST") {
+    if (
+      request.body.data.event == "ADDRESS_COINS_TRANSACTION_UNCONFIRMED" &&
+      request.body.data.item.network == "mainnet" &&
+      request.body.data.item.direction == "incoming" &&
+      request.body.data.item.unit == "BTC"
+    ) {
+      const snap = await db
+        .collection("users")
+        .where("payment_link.address", "==", request.body.data.item.address)
+        .get();
+
+      if (snap.size > 0) {
+        const doc = snap.docs[0];
+        const data = doc.data();
+
+        await doc.ref.update({
+          payment_link: {
+            ...data.payment_link,
+            status: 'confirming'
+          }
+        })
+
+        response.status(200).send(true)
+      } else {
+        logger.log("Cantidad incorrecta")
+        response.status(200).send(true);
+      }
+    } else {
+      response.status(200).send(true);
+    }
   }
 });
 

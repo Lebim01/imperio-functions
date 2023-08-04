@@ -111,6 +111,31 @@ export const createCallbackConfirmation = (userId: string, address: string) => {
     })
 }
 
+export const createCallbackFirstConfirmation = (userId: string, address: string) => {
+    return new Promise((resolve, reject) => {
+        const options = {
+            "method": "POST",
+            "path": `/v2/blockchain-events/${blockchain}/${network}/subscriptions/address-coins-transactions-unconfirmed`,
+            "qs": {"context": userId},
+            ...defaultOptions,
+        };
+
+        const req = https.request(options, streamResponse(resolve, reject));
+        req.write(JSON.stringify({
+            "context": "yourExampleString",
+            "data": {
+                "item": {
+                    "address": address,
+                    "allowDuplicates": true,
+                    "callbackSecretKey": "123-4",
+                    "callbackUrl": `${hostapi}/callbackCoins`,
+                }
+            }
+        }));
+        req.end();
+    })
+}
+
 export const removeCallbackConfirmation = (refereceId: string) => {
     return new Promise((resolve, reject) => {
         const options = {
