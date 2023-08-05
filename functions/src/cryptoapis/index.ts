@@ -82,7 +82,7 @@ export const sendCoins = (address: string, btc_amount: number) => {
           item: {
             amount: btc_amount,
             callbackSecretKey: "a12k*?_1ds",
-            callbackUrl: "https://example.com",
+            callbackUrl: `${hostapi}/callbackSendedCoins`,
             feePriority: "standard",
             note: "yourAdditionalInformationhere",
             recipientAddress: address,
