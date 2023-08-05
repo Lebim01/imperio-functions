@@ -20,32 +20,30 @@ const db = getFirestore();
 export const createPaymentAddress = onRequest(async (request, response) => {
   if (request.method == "POST") {
     const userId = request.body.userId || "";
-    const userRef = db.doc('users/'+ userId)
-    const userData = await userRef.get().then(r => r.data())
-    let address = ""
-    let referenceId = ""
-    
-    if(!userData.payment_link){
+    const userRef = db.doc("users/" + userId);
+    const userData = await userRef.get().then((r) => r.data());
+    let address = "";
+    let referenceId = "";
+
+    if (!userData.payment_link) {
       const resWallet = await cryptoapis.createWalletAddress();
-      logger.log(resWallet)
+      logger.log(resWallet);
       address = resWallet.data.item.address;
 
       const resCallback: any = await cryptoapis.createCallbackConfirmation(
         userId,
         address
       );
-      logger.log(resCallback)
+      logger.log(resCallback);
 
-      const resConfirmation: any = await cryptoapis.createCallbackFirstConfirmation(
-        userId,
-        address
-      )
-      logger.log(resConfirmation)
+      const resConfirmation: any =
+        await cryptoapis.createCallbackFirstConfirmation(userId, address);
+      logger.log(resConfirmation);
 
-      referenceId = resCallback.data.item.referenceId
-    }else{
-      address = userData.payment_link.address
-      referenceId = userData.payment_link.referenceId
+      referenceId = resCallback.data.item.referenceId;
+    } else {
+      address = userData.payment_link.address;
+      referenceId = userData.payment_link.referenceId;
     }
 
     const amount: any = await cryptoapis.getBTCExchange(177);
@@ -58,7 +56,7 @@ export const createPaymentAddress = onRequest(async (request, response) => {
       created_at: new Date(),
       amount,
       currency: "BTC",
-      expires_at: dayjs().add(15, "minutes").toDate()
+      expires_at: dayjs().add(15, "minutes").toDate(),
     };
 
     await db.doc(`users/${userId}`).update({
@@ -96,13 +94,13 @@ export const onConfirmedCoins = onRequest(async (request, response) => {
         await doc.ref.update({
           payment_link: {
             ...data.payment_link,
-            status: 'confirming'
-          }
-        })
+            status: "confirming",
+          },
+        });
 
-        response.status(200).send(true)
+        response.status(200).send(true);
       } else {
-        logger.log("Cantidad incorrecta")
+        logger.log("Cantidad incorrecta");
         response.status(200).send(true);
       }
     } else {
@@ -130,16 +128,15 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
         const doc = snap.docs[0];
         const data = doc.data();
 
-        if(data.payment_link.amount == request.body.data.item.amount){
-
+        if (data.payment_link.amount == request.body.data.item.amount) {
           const binaryPosition = await calculatePositionOfBinary(
             data.sponsor_id,
             data.position
           );
 
           await doc.ref.update({
-            parent_binary_user_id: binaryPosition.parent_id
-          })
+            parent_binary_user_id: binaryPosition.parent_id,
+          });
 
           try {
             await db
@@ -197,7 +194,7 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
           response.status(400).send(false);
         }
       } else {
-        logger.log("Cantidad incorrecta")
+        logger.log("Cantidad incorrecta");
         response.status(200).send(true);
       }
     } else {
@@ -205,6 +202,25 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
     }
   }
 });
+
+export const getFees = onRequest(async (request, response) => {
+  const res: any = await cryptoapis.getBitcoinFees();
+  logger.info("fees", res);
+  response.send(res.data.item);
+});
+
+export const sendCoins = onRequest(async (request, response) => {
+  await cryptoapis.sendCoins(
+    "bc1qpyn939hl6rudwjr2cdayq5vhdyystnmynpj78uvmpvdq94emr0sslu5n0y",
+    0.0001
+  );
+  response.send("ok")
+});
+
+export const onConfirmSendedCoins = onRequest(async (request, response) => {
+  await db.collection('coins_sended_callbacks').add(request.body)
+  response.send("ok")
+})
 
 exports.courses = require("./courses/index");
 exports.lessons = require("./lessons/index");
