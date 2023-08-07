@@ -65,7 +65,7 @@ export const getBitcoinFees = () => {
   });
 };
 
-export const sendCoins = (recipients: { address: string, btc_amount: string }[]) => {
+export const sendCoins = (recipients: { address: string, amount: string }[]) => {
   return new Promise((resolve, reject) => {
     const options = {
       method: "POST",
