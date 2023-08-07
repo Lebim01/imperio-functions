@@ -65,11 +65,11 @@ export const getBitcoinFees = () => {
   });
 };
 
-export const sendCoins = (address: string, btc_amount: number) => {
+export const sendCoins = (recipients: { address: string, btc_amount: string }[]) => {
   return new Promise((resolve, reject) => {
     const options = {
-      method: "GET",
-      path: `/v2/wallet-as-a-service/wallets/${walletId}/${blockchain}/${network}/addresses/${walletAddress}/transaction-requests`,
+      method: "POST",
+      path: `/v2/wallet-as-a-service/wallets/${walletId}/${blockchain}/${network}/transaction-requests`,
       qs: { context: "yourExampleString" },
       ...defaultOptions,
     };
@@ -77,15 +77,15 @@ export const sendCoins = (address: string, btc_amount: number) => {
     const req = https.request(options, streamResponse(resolve, reject));
     req.write(
       JSON.stringify({
-        context: "yourExampleString",
+        context: "saul wallet",
         data: {
           item: {
-            amount: btc_amount,
             callbackSecretKey: "a12k*?_1ds",
             callbackUrl: `${hostapi}/callbackSendedCoins`,
             feePriority: "standard",
             note: "yourAdditionalInformationhere",
-            recipientAddress: address,
+            prepareStrategy: "minimize-dust",
+            recipients,
           },
         },
       })
@@ -144,7 +144,7 @@ export const createCallbackConfirmation = (userId: string, address: string) => {
     const req = https.request(options, streamResponse(resolve, reject));
     req.write(
       JSON.stringify({
-        context: "yourExampleString",
+        context: userId,
         data: {
           item: {
             address: address,
@@ -175,7 +175,7 @@ export const createCallbackFirstConfirmation = (
     const req = https.request(options, streamResponse(resolve, reject));
     req.write(
       JSON.stringify({
-        context: "yourExampleString",
+        context: userId,
         data: {
           item: {
             address: address,

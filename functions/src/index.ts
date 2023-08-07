@@ -173,17 +173,24 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
             }
           }
 
+          const transactions = await doc.ref.collection("transactions").get();
+          const isNew = transactions.size == 0;
+
           await doc.ref.set(
             {
               payment_link: {},
               subscription: "pro",
               subscription_status: "paid",
-              subscription_expires_at: dayjs().add(28, "days").toDate(),
+              subscription_expires_at: dayjs()
+                .add(isNew ? 56 : 28, "days")
+                .toDate(),
             },
             {
               merge: true,
             }
           );
+
+          await doc.ref.collection("transactions").add(request.body);
 
           response.status(200).send(true);
         } else {
@@ -210,17 +217,50 @@ export const getFees = onRequest(async (request, response) => {
 });
 
 export const sendCoins = onRequest(async (request, response) => {
-  await cryptoapis.sendCoins(
-    "bc1qpyn939hl6rudwjr2cdayq5vhdyystnmynpj78uvmpvdq94emr0sslu5n0y",
-    0.0001
-  );
-  response.send("ok")
+  await cryptoapis.sendCoins(request.body);
+  response.send("ok");
+});
+
+export const payroll = onRequest(async (request, response) => {
+  const users = await db.collection("users").get();
+  const docs = users.docs.map((r) => ({ id: r.id, ...r.data() }));
+
+  const payroll_data = docs
+    .map((docData: any) => {
+      const binary_side =
+        docData.left_points > docData.right_points ? "right" : "left";
+      const binary_points = docData[`${binary_side}_points`];
+      return {
+        id: docData.id,
+        name: docData.name,
+        direct: docData.bond_direct || 0,
+        binary: binary_points * 0.1,
+        binary_side,
+        binary_points,
+        wallet_bitcoin: docData.wallet_bitcoin,
+      };
+    })
+    .map((doc) => ({
+      ...doc,
+      subtotal: doc.direct + doc.binary,
+      total: doc.direct + doc.binary - (doc.direct + doc.binary) * 0.05,
+      fee: (doc.direct + doc.binary) * 0.05,
+    }))
+    .filter((doc) => doc.total >= 40)
+    .filter((doc) => Boolean(doc.wallet_bitcoin));
+
+  const request_payment = await Promise.all(payroll_data.map(async (doc) => ({
+    address: doc.wallet_bitcoin,
+    amount: await cryptoapis.getBTCExchange(doc.total)
+  })))
+
+  response.send(request_payment)
 });
 
 export const onConfirmSendedCoins = onRequest(async (request, response) => {
-  await db.collection('coins_sended_callbacks').add(request.body)
-  response.send("ok")
-})
+  await db.collection("coins_sended_callbacks").add(request.body);
+  response.send("ok");
+});
 
 exports.courses = require("./courses/index");
 exports.lessons = require("./lessons/index");
