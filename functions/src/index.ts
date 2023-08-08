@@ -8,7 +8,7 @@ import * as dayjs from "dayjs";
 
 initializeApp();
 
-setGlobalOptions({ maxInstances: 10 });
+setGlobalOptions({ maxInstances: 10, timeoutSeconds: 540 });
 
 const db = getFirestore();
 
@@ -280,8 +280,9 @@ export const payroll = onRequest(async (request, response) => {
     total_btc: payroll_data_2.reduce((a, b) => a + b.btc_amount, 0),
     created_at: new Date()
   });
-  await Promise.all(payroll_data_2.map((doc) => {
-    return ref.collection("details").add(doc)
+  await Promise.all(payroll_data_2.map(async (doc) => {
+    await ref.collection("details").add(doc)
+    await db.collection(`users/${doc.id}/payroll`).add(doc)
   }))
 
   for(const doc of payroll_data_2) {
