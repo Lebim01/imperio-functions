@@ -48,6 +48,9 @@ exports.onCreateUser = functions.firestore
           logger.info("no se pudo actualizar el binario derrame", e);
         }
 
+        /**
+         * se supone deberia actualizar el contador de usuarios que estan en la red
+         */
         await increaseUnderlinePeople(documentId)
       }
 

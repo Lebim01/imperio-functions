@@ -133,12 +133,18 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
             data.sponsor_id,
             data.position
           );
-
+          
+          /**
+           * se setea el valor del usuario padre en el usuario que se registro
+           */
           await doc.ref.update({
             parent_binary_user_id: binaryPosition.parent_id,
           });
 
           try {
+            /**
+             * se setea el valor del hijo al usuario ascendente en el binario
+             */
             await db
               .collection("users")
               .doc(binaryPosition.parent_id)
@@ -151,12 +157,22 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
             logger.info("no se pudo actualizar el binario derrame", e);
           }
 
+          /**
+           * eliminar el evento que esta en el servicio de la wallet
+           */
           await cryptoapis.removeCallbackConfirmation(request.body.refereceId);
+
+          /**
+           * guardar registro de la transaccion dentro de una subcoleccion
+           */
           await db.collection(`users/${doc.id}/transactions`).add({
             ...request.body,
             created_at: new Date(),
           });
 
+          /**
+           * aumenta los puntos del binario hacia arriba
+           */
           if (data.sponsor_id) {
             try {
               await increaseBinaryPoints(doc.id);
@@ -165,6 +181,9 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
             }
           }
 
+          /**
+           * aumentar puntos de bono directo 2 niveles
+           */
           if (data.sponsor_id && !data.subscription) {
             try {
               await execUserDirectBond(data.sponsor_id);
@@ -173,6 +192,11 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
             }
           }
 
+          /**
+           * usuarios solo nuevos (primera vez) deberian tener 56 dias
+           * usuarios segunda vez solo 28 dias
+           * FIX
+           */
           const transactions = await doc.ref.collection("transactions").get();
           const isNew = transactions.size == 0;
 
@@ -189,8 +213,6 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
               merge: true,
             }
           );
-
-          await doc.ref.collection("transactions").add(request.body);
 
           response.status(200).send(true);
         } else {
