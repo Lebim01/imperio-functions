@@ -275,12 +275,14 @@ export const payroll = onRequest(async (request, response) => {
     }))
   );
 
-  /*const ref = await db.collection("payroll").add({
+  const ref = await db.collection("payroll").add({
+    total_usd: payroll_data_2.reduce((a, b) => a + b.total, 0),
+    total_btc: payroll_data_2.reduce((a, b) => a + b.btc_amount, 0),
     created_at: new Date()
   });
   await Promise.all(payroll_data_2.map((doc) => {
-    return ref.collection("members").add(doc)
-  }))*/
+    return ref.collection("details").add(doc)
+  }))
 
   for(const doc of payroll_data_2) {
     await db.doc('users/' + doc.id).update({
