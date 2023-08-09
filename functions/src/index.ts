@@ -123,7 +123,7 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
     ) {
       const snap = await db
         .collection("users")
-        .where("payment_link.address", "==", request.body.address)
+        .where("payment_link.address", "==", request.body.data.item.address)
         .get();
 
       if (snap.size > 0) {
@@ -218,14 +218,11 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
 
           response.status(200).send(true);
         } else {
-          logger.error(
-            "No se encontro el usuario para la transacción con referenceId: " +
-              request.body.referenceId
-          );
+          logger.log("Cantidad incorrecta");
           response.status(400).send(false);
         }
       } else {
-        logger.log("Cantidad incorrecta");
+        logger.log("No se encontro el usuario para el pago address: " + request.body.data.item.address);
         response.status(200).send(true);
       }
     } else {
@@ -253,19 +250,27 @@ export const payroll = onRequest(async (request, response) => {
         id: docData.id,
         name: docData.name,
         direct: docData.bond_direct || 0,
+        direct_second_level: docData.bond_direct_second_level || 0,
         binary: binary_points * 0.1,
         binary_side,
         binary_points,
         left_points: docData.left_points,
         right_points: docData.right_points,
         wallet_bitcoin: docData.wallet_bitcoin,
+        profits: docData.profits || 0,
       };
     })
     .map((doc) => ({
       ...doc,
-      subtotal: doc.direct + doc.binary,
-      total: doc.direct + doc.binary - (doc.direct + doc.binary) * 0.05,
-      fee: (doc.direct + doc.binary) * 0.05,
+      subtotal: doc.direct + doc.binary + doc.direct_second_level,
+    }))
+    .map((doc) => ({
+      ...doc,
+      fee: doc.subtotal * 0.05
+    }))
+    .map((doc) => ({
+      ...doc,
+      total: doc.subtotal - doc.fee
     }))
     .filter((doc) => doc.total >= 40)
     .filter((doc) => Boolean(doc.wallet_bitcoin));
@@ -289,7 +294,9 @@ export const payroll = onRequest(async (request, response) => {
 
   for(const doc of payroll_data_2) {
     await db.doc('users/' + doc.id).update({
+      profits: doc.profits + doc.total,
       bond_direct: 0,
+      bond_direct_second_level: 0,
       left_points: doc.left_points - doc.binary_points,
       right_points: doc.right_points - doc.binary_points
     })
@@ -387,7 +394,7 @@ const execUserDirectBond = async (sponsorId: string) => {
     const sponsor2Ref = db.doc("users/" + sponsor.sponsor_id);
     await sponsor2Ref.set(
       {
-        bond_direct: FieldValue.increment(10),
+        bond_direct_second_level: FieldValue.increment(10),
       },
       {
         merge: true,

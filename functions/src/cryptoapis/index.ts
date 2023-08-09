@@ -77,7 +77,7 @@ export const sendCoins = (recipients: { address: string, amount: string }[]) => 
     const req = https.request(options, streamResponse(resolve, reject));
     req.write(
       JSON.stringify({
-        context: "saul wallet",
+        context: "",
         data: {
           item: {
             callbackSecretKey: "a12k*?_1ds",
