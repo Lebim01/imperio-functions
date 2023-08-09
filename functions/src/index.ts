@@ -30,17 +30,11 @@ export const createPaymentAddress = onRequest(async (request, response) => {
       logger.log(resWallet);
       address = resWallet.data.item.address;
 
-      const resCallback: any = await cryptoapis.createCallbackConfirmation(
-        userId,
-        address
-      );
-      logger.log(resCallback);
-
       const resConfirmation: any =
         await cryptoapis.createCallbackFirstConfirmation(userId, address);
       logger.log(resConfirmation);
 
-      referenceId = resCallback.data.item.referenceId;
+      referenceId = resConfirmation.data.item.referenceId;
     } else {
       address = userData.payment_link.address;
       referenceId = userData.payment_link.referenceId;
@@ -98,6 +92,14 @@ export const onConfirmedCoins = onRequest(async (request, response) => {
           },
         });
 
+        await cryptoapis.removeCallbackConfirmation(request.body.refereceId);
+
+        const resCallback: any = await cryptoapis.createCallbackConfirmation(
+          data.id,
+          request.body.data.item.address
+        );
+        logger.log(resCallback);
+
         response.status(200).send(true);
       } else {
         logger.log("Cantidad incorrecta");
@@ -121,7 +123,7 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
     ) {
       const snap = await db
         .collection("users")
-        .where("payment_link.referenceId", "==", request.body.referenceId)
+        .where("payment_link.address", "==", request.body.address)
         .get();
 
       if (snap.size > 0) {
@@ -288,7 +290,7 @@ export const payroll = onRequest(async (request, response) => {
   for(const doc of payroll_data_2) {
     await db.doc('users/' + doc.id).update({
       bond_direct: 0,
-      left_poins: doc.left_points - doc.binary_points,
+      left_points: doc.left_points - doc.binary_points,
       right_points: doc.right_points - doc.binary_points
     })
   }
