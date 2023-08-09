@@ -103,10 +103,10 @@ export const onConfirmedCoins = onRequest(async (request, response) => {
         response.status(200).send(true);
       } else {
         logger.log("Cantidad incorrecta");
-        response.status(200).send(true);
+        response.status(400).send(true);
       }
     } else {
-      response.status(200).send(true);
+      response.status(400).send(true);
     }
   }
 });
@@ -165,14 +165,6 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
           await cryptoapis.removeCallbackConfirmation(request.body.refereceId);
 
           /**
-           * guardar registro de la transaccion dentro de una subcoleccion
-           */
-          await db.collection(`users/${doc.id}/transactions`).add({
-            ...request.body,
-            created_at: new Date(),
-          });
-
-          /**
            * aumenta los puntos del binario hacia arriba
            */
           if (data.sponsor_id) {
@@ -216,6 +208,14 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
             }
           );
 
+          /**
+           * guardar registro de la transaccion dentro de una subcoleccion
+           */
+          await db.collection(`users/${doc.id}/transactions`).add({
+            ...request.body,
+            created_at: new Date(),
+          });
+
           response.status(200).send(true);
         } else {
           logger.log("Cantidad incorrecta");
@@ -223,10 +223,10 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
         }
       } else {
         logger.log("No se encontro el usuario para el pago address: " + request.body.data.item.address);
-        response.status(200).send(true);
+        response.status(400).send(true);
       }
     } else {
-      response.status(200).send(true);
+      response.status(400).send(true);
     }
   }
 });
