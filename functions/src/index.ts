@@ -289,7 +289,10 @@ export const payroll = onRequest(async (request, response) => {
   });
   await Promise.all(payroll_data_2.map(async (doc) => {
     await ref.collection("details").add(doc)
-    await db.collection(`users/${doc.id}/payroll`).add(doc)
+    await db.collection(`users/${doc.id}/payroll`).add({
+      ...doc,
+      created_at: new Date()
+    })
   }))
 
   for(const doc of payroll_data_2) {
