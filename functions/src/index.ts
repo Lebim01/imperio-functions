@@ -130,7 +130,7 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
         const doc = snap.docs[0];
         const data = doc.data();
 
-        if (data.payment_link.amount == request.body.data.item.amount) {
+        if (data.payment_link.amount <= request.body.data.item.amount) {
           const binaryPosition = await calculatePositionOfBinary(
             data.sponsor_id,
             data.position
