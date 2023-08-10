@@ -55,6 +55,14 @@ exports.onCreateUser = functions.firestore
       }
 
       try {
+        await db.collection('users').doc(data.sponsor_id).update({
+          count_direct_people: FieldValue.increment(1)
+        })
+      }catch(err){
+        console.error(err)
+      }
+
+      try {
         await db.collection("users").doc(documentId).update(newData);
       } catch (e) {
         logger.info("no se crearon los campos", e);
