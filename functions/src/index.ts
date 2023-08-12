@@ -135,7 +135,8 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
             data.sponsor_id,
             data.position
           );
-          
+          logger.log(binaryPosition)
+
           /**
            * se setea el valor del usuario padre en el usuario que se registro
            */
@@ -189,7 +190,6 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
           /**
            * usuarios solo nuevos (primera vez) deberian tener 56 dias
            * usuarios segunda vez solo 28 dias
-           * FIX
            */
           const transactions = await doc.ref.collection("transactions").get();
           const isNew = transactions.size == 0;
@@ -222,10 +222,14 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
           response.status(400).send(false);
         }
       } else {
-        logger.log("No se encontro el usuario para el pago address: " + request.body.data.item.address);
+        logger.log(
+          "No se encontro el usuario para el pago address: " +
+            request.body.data.item.address
+        );
         response.status(400).send(true);
       }
     } else {
+      logger.log("algo no viene bien")
       response.status(400).send(true);
     }
   }
@@ -241,6 +245,11 @@ export const payroll = onRequest(async (request, response) => {
   const users = await db.collection("users").get();
   const docs = users.docs.map((r) => ({ id: r.id, ...r.data() }));
 
+  const binary_15 = [
+    "IC2DFTuYg9aT9KqOEvDjI34Hk0E3",
+    "7iRezG7E6vRq7OQywQN3WawSa872",
+  ];
+
   const payroll_data = docs
     .map((docData: any) => {
       const binary_side =
@@ -251,7 +260,7 @@ export const payroll = onRequest(async (request, response) => {
         name: docData.name,
         direct: docData.bond_direct || 0,
         direct_second_level: docData.bond_direct_second_level || 0,
-        binary: binary_points * 0.1,
+        binary: binary_points * (binary_15.includes(docData.id) ? 0.15 : 0.1),
         binary_side,
         binary_points,
         left_points: docData.left_points,
@@ -266,11 +275,11 @@ export const payroll = onRequest(async (request, response) => {
     }))
     .map((doc) => ({
       ...doc,
-      fee: doc.subtotal * 0.05
+      fee: doc.subtotal * 0.05,
     }))
     .map((doc) => ({
       ...doc,
-      total: doc.subtotal - doc.fee
+      total: doc.subtotal - doc.fee,
     }))
     .filter((doc) => doc.total >= 40)
     .filter((doc) => Boolean(doc.wallet_bitcoin));
@@ -285,24 +294,26 @@ export const payroll = onRequest(async (request, response) => {
   const ref = await db.collection("payroll").add({
     total_usd: payroll_data_2.reduce((a, b) => a + b.total, 0),
     total_btc: payroll_data_2.reduce((a, b) => a + b.btc_amount, 0),
-    created_at: new Date()
+    created_at: new Date(),
   });
-  await Promise.all(payroll_data_2.map(async (doc) => {
-    await ref.collection("details").add(doc)
-    await db.collection(`users/${doc.id}/payroll`).add({
-      ...doc,
-      created_at: new Date()
+  await Promise.all(
+    payroll_data_2.map(async (doc) => {
+      await ref.collection("details").add(doc);
+      await db.collection(`users/${doc.id}/payroll`).add({
+        ...doc,
+        created_at: new Date(),
+      });
     })
-  }))
+  );
 
-  for(const doc of payroll_data_2) {
-    await db.doc('users/' + doc.id).update({
+  for (const doc of payroll_data_2) {
+    await db.doc("users/" + doc.id).update({
       profits: doc.profits + doc.total,
       bond_direct: 0,
       bond_direct_second_level: 0,
       left_points: doc.left_points - doc.binary_points,
-      right_points: doc.right_points - doc.binary_points
-    })
+      right_points: doc.right_points - doc.binary_points,
+    });
   }
 
   await cryptoapis.sendCoins(
