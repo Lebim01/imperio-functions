@@ -199,6 +199,7 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
               payment_link: {},
               subscription: "pro",
               subscription_status: "paid",
+              subscription_start_at: dayjs().toDate(),
               subscription_expires_at: dayjs()
                 .add(isNew ? 56 : 28, "days")
                 .toDate(),
