@@ -66,6 +66,55 @@ export const createPaymentAddress = onRequest(async (request, response) => {
   }
 });
 
+export const createPaymentAddressSupreme = onRequest(async (request, response) => {
+  if (request.method == "POST") {
+    const userId = request.body.userId || "";
+    const userRef = db.doc("users/" + userId);
+    const userData = await userRef.get().then((r) => r.data());
+    let address = "";
+    let referenceId = "";
+
+    if (!userData.payment_link) {
+      const resWallet = await cryptoapis.createWalletAddress();
+      logger.log(resWallet);
+      address = resWallet.data.item.address;
+
+      const resConfirmation: any =
+        await cryptoapis.createCallbackFirstConfirmation(userId, address);
+      logger.log(resConfirmation);
+
+      referenceId = resConfirmation.data.item.referenceId;
+    } else {
+      address = userData.payment_link.address;
+      referenceId = userData.payment_link.referenceId;
+    }
+
+    const amount: any = await cryptoapis.getBTCExchange(277);
+
+    const payment_link = {
+      referenceId,
+      address,
+      qr: `https://chart.googleapis.com/chart?chs=225x225&chld=L|2&cht=qr&chl=bitcoin:${address}?amount=${amount}`,
+      status: "pending",
+      created_at: new Date(),
+      amount,
+      currency: "BTC",
+      expires_at: dayjs().add(15, "minutes").toDate(),
+    };
+
+    await db.doc(`users/${userId}`).update({
+      payment_link,
+    });
+
+    response.send({
+      address: address,
+      amount: payment_link.amount,
+      currency: payment_link.currency,
+      qr: payment_link.qr,
+    });
+  }
+});
+
 export const onConfirmedCoins = onRequest(async (request, response) => {
   logger.log(request.body);
 
