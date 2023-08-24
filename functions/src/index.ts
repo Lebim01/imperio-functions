@@ -70,7 +70,9 @@ export const createPaymentAddressSupreme = onRequest(
   async (request, response) => {
     if (request.method == 'POST') {
       const userId = request.body.userId || '';
+      if (!userId) response.status(400).send('userId is required');
       const userRef = db.doc('users/' + userId);
+      if (!userRef) response.status(404).send('User not found');
       const userData = await userRef.get().then((r) => r.data());
       let address = '';
       let referenceId = '';
@@ -90,7 +92,14 @@ export const createPaymentAddressSupreme = onRequest(
         referenceId = userData.payment_link.referenceId;
       }
 
-      const amount: any = await cryptoapis.getBTCExchange(277);
+      let amount: any = null;
+      if (
+        dayjs(userData.subscription.pro.expires_at.toDate()).isAfter(dayjs())
+      ) {
+        amount = await cryptoapis.getBTCExchange(100);
+      } else {
+        amount = await cryptoapis.getBTCExchange(277);
+      }
 
       const payment_link = {
         referenceId,
