@@ -1,10 +1,10 @@
-import { onRequest } from "firebase-functions/v2/https";
-import { setGlobalOptions } from "firebase-functions/v2";
-import * as logger from "firebase-functions/logger";
-import { initializeApp } from "firebase-admin/app";
-import { FieldValue, Filter, getFirestore } from "firebase-admin/firestore";
-import * as cryptoapis from "./cryptoapis";
-import * as dayjs from "dayjs";
+import { onRequest } from 'firebase-functions/v2/https';
+import { setGlobalOptions } from 'firebase-functions/v2';
+import * as logger from 'firebase-functions/logger';
+import { initializeApp } from 'firebase-admin/app';
+import { FieldValue, Filter, getFirestore } from 'firebase-admin/firestore';
+import * as cryptoapis from './cryptoapis';
+import * as dayjs from 'dayjs';
 
 initializeApp();
 
@@ -18,12 +18,12 @@ const db = getFirestore();
  * }
  */
 export const createPaymentAddress = onRequest(async (request, response) => {
-  if (request.method == "POST") {
-    const userId = request.body.userId || "";
-    const userRef = db.doc("users/" + userId);
+  if (request.method == 'POST') {
+    const userId = request.body.userId || '';
+    const userRef = db.doc('users/' + userId);
     const userData = await userRef.get().then((r) => r.data());
-    let address = "";
-    let referenceId = "";
+    let address = '';
+    let referenceId = '';
 
     if (!userData.payment_link) {
       const resWallet = await cryptoapis.createWalletAddress();
@@ -46,11 +46,11 @@ export const createPaymentAddress = onRequest(async (request, response) => {
       referenceId,
       address,
       qr: `https://chart.googleapis.com/chart?chs=225x225&chld=L|2&cht=qr&chl=bitcoin:${address}?amount=${amount}`,
-      status: "pending",
+      status: 'pending',
       created_at: new Date(),
       amount,
-      currency: "BTC",
-      expires_at: dayjs().add(15, "minutes").toDate(),
+      currency: 'BTC',
+      expires_at: dayjs().add(15, 'minutes').toDate(),
     };
 
     await db.doc(`users/${userId}`).update({
@@ -66,19 +66,79 @@ export const createPaymentAddress = onRequest(async (request, response) => {
   }
 });
 
+export const createPaymentAddressSupreme = onRequest(
+  async (request, response) => {
+    if (request.method == 'POST') {
+      const userId = request.body.userId || '';
+      if (!userId) response.status(400).send('userId is required');
+      const userRef = db.doc('users/' + userId);
+      if (!userRef) response.status(404).send('User not found');
+      const userData = await userRef.get().then((r) => r.data());
+      let address = '';
+      let referenceId = '';
+
+      if (!userData.payment_link) {
+        const resWallet = await cryptoapis.createWalletAddress();
+        logger.log(resWallet);
+        address = resWallet.data.item.address;
+
+        const resConfirmation: any =
+          await cryptoapis.createCallbackFirstConfirmation(userId, address);
+        logger.log(resConfirmation);
+
+        referenceId = resConfirmation.data.item.referenceId;
+      } else {
+        address = userData.payment_link.address;
+        referenceId = userData.payment_link.referenceId;
+      }
+
+      let amount: any = null;
+      if (
+        dayjs(userData.subscription.pro.expires_at.toDate()).isAfter(dayjs())
+      ) {
+        amount = await cryptoapis.getBTCExchange(100);
+      } else {
+        amount = await cryptoapis.getBTCExchange(277);
+      }
+
+      const payment_link = {
+        referenceId,
+        address,
+        qr: `https://chart.googleapis.com/chart?chs=225x225&chld=L|2&cht=qr&chl=bitcoin:${address}?amount=${amount}`,
+        status: 'pending',
+        created_at: new Date(),
+        amount,
+        currency: 'BTC',
+        expires_at: dayjs().add(15, 'minutes').toDate(),
+      };
+
+      await db.doc(`users/${userId}`).update({
+        payment_link,
+      });
+
+      response.send({
+        address: address,
+        amount: payment_link.amount,
+        currency: payment_link.currency,
+        qr: payment_link.qr,
+      });
+    }
+  }
+);
+
 export const onConfirmedCoins = onRequest(async (request, response) => {
   logger.log(request.body);
 
-  if (request.method == "POST") {
+  if (request.method == 'POST') {
     if (
-      request.body.data.event == "ADDRESS_COINS_TRANSACTION_UNCONFIRMED" &&
-      request.body.data.item.network == "mainnet" &&
-      request.body.data.item.direction == "incoming" &&
-      request.body.data.item.unit == "BTC"
+      request.body.data.event == 'ADDRESS_COINS_TRANSACTION_UNCONFIRMED' &&
+      request.body.data.item.network == 'mainnet' &&
+      request.body.data.item.direction == 'incoming' &&
+      request.body.data.item.unit == 'BTC'
     ) {
       const snap = await db
-        .collection("users")
-        .where("payment_link.address", "==", request.body.data.item.address)
+        .collection('users')
+        .where('payment_link.address', '==', request.body.data.item.address)
         .get();
 
       if (snap.size > 0) {
@@ -88,7 +148,7 @@ export const onConfirmedCoins = onRequest(async (request, response) => {
         await doc.ref.update({
           payment_link: {
             ...data.payment_link,
-            status: "confirming",
+            status: 'confirming',
           },
         });
 
@@ -102,7 +162,7 @@ export const onConfirmedCoins = onRequest(async (request, response) => {
 
         response.status(200).send(true);
       } else {
-        logger.log("Cantidad incorrecta");
+        logger.log('Cantidad incorrecta');
         response.status(400).send(true);
       }
     } else {
@@ -114,16 +174,16 @@ export const onConfirmedCoins = onRequest(async (request, response) => {
 export const onConfirmedTransaction = onRequest(async (request, response) => {
   logger.log(request.body);
 
-  if (request.method == "POST") {
+  if (request.method == 'POST') {
     if (
-      request.body.data.event == "ADDRESS_COINS_TRANSACTION_CONFIRMED" &&
-      request.body.data.item.network == "mainnet" &&
-      request.body.data.item.direction == "incoming" &&
-      request.body.data.item.unit == "BTC"
+      request.body.data.event == 'ADDRESS_COINS_TRANSACTION_CONFIRMED' &&
+      request.body.data.item.network == 'mainnet' &&
+      request.body.data.item.direction == 'incoming' &&
+      request.body.data.item.unit == 'BTC'
     ) {
       const snap = await db
-        .collection("users")
-        .where("payment_link.address", "==", request.body.data.item.address)
+        .collection('users')
+        .where('payment_link.address', '==', request.body.data.item.address)
         .get();
 
       if (snap.size > 0) {
@@ -135,7 +195,7 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
             data.sponsor_id,
             data.position
           );
-          logger.log(binaryPosition)
+          logger.log(binaryPosition);
 
           /**
            * se setea el valor del usuario padre en el usuario que se registro
@@ -149,15 +209,15 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
              * se setea el valor del hijo al usuario ascendente en el binario
              */
             await db
-              .collection("users")
+              .collection('users')
               .doc(binaryPosition.parent_id)
               .update(
-                data.position == "left"
+                data.position == 'left'
                   ? { left_binary_user_id: doc.id }
                   : { right_binary_user_id: doc.id }
               );
           } catch (e) {
-            logger.info("no se pudo actualizar el binario derrame", e);
+            logger.info('no se pudo actualizar el binario derrame', e);
           }
 
           /**
@@ -172,7 +232,7 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
             try {
               await increaseBinaryPoints(doc.id);
             } catch (e) {
-              logger.info("no se repartio el bono binario", e);
+              logger.info('no se repartio el bono binario', e);
             }
           }
 
@@ -183,7 +243,7 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
             try {
               await execUserDirectBond(data.sponsor_id);
             } catch (e) {
-              logger.info("no se repartio el bono directo", e);
+              logger.info('no se repartio el bono directo', e);
             }
           }
 
@@ -191,17 +251,17 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
            * usuarios solo nuevos (primera vez) deberian tener 56 dias
            * usuarios segunda vez solo 28 dias
            */
-          const transactions = await doc.ref.collection("transactions").get();
+          const transactions = await doc.ref.collection('transactions').get();
           const isNew = transactions.size == 0;
 
           await doc.ref.set(
             {
               payment_link: {},
-              subscription: "pro",
-              subscription_status: "paid",
+              subscription: 'pro',
+              subscription_status: 'paid',
               subscription_start_at: dayjs().toDate(),
               subscription_expires_at: dayjs()
-                .add(isNew ? 56 : 28, "days")
+                .add(isNew ? 56 : 28, 'days')
                 .toDate(),
             },
             {
@@ -219,42 +279,88 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
 
           response.status(200).send(true);
         } else {
-          logger.log("Cantidad incorrecta");
+          logger.log('Cantidad incorrecta');
           response.status(400).send(false);
         }
       } else {
         logger.log(
-          "No se encontro el usuario para el pago address: " +
+          'No se encontro el usuario para el pago address: ' +
             request.body.data.item.address
         );
         response.status(400).send(true);
       }
     } else {
-      logger.log("algo no viene bien")
+      logger.log('algo no viene bien');
       response.status(400).send(true);
     }
   }
 });
 
+export const onConfirmedTransactionSupreme = onRequest(
+  async (request, response) => {
+    logger.log(request.body);
+
+    if (request.method == 'POST') {
+      if (
+        request.body.data.event == 'ADDRESS_COINS_TRANSACTION_CONFIRMED' &&
+        request.body.data.item.network == 'mainnet' &&
+        request.body.data.item.direction == 'incoming' &&
+        request.body.data.item.unit == 'BTC'
+      ) {
+        const snap = await db
+          .collection('users')
+          .where('payment_link.address', '==', request.body.data.item.address)
+          .get();
+
+        if (snap.size > 0) {
+          const doc = snap.docs[0];
+          const data = doc.data();
+
+          if (data.payment_link.amount <= request.body.data.item.amount) {
+            await db.collection(`users/${doc.id}/supreme`).add({
+              ...request.body,
+              created_at: new Date(),
+            });
+
+            response.status(200).send(true);
+          } else {
+            logger.log('Cantidad incorrecta');
+            response.status(400).send(false);
+          }
+        } else {
+          logger.log(
+            'No se encontro el usuario para el pago address: ' +
+              request.body.data.item.address
+          );
+          response.status(400).send(true);
+        }
+      } else {
+        logger.log('algo no viene bien');
+        response.status(400).send(true);
+      }
+    }
+  }
+);
+
 export const getFees = onRequest(async (request, response) => {
   const res: any = await cryptoapis.getBitcoinFees();
-  logger.info("fees", res);
+  logger.info('fees', res);
   response.send(res.data.item);
 });
 
 export const payroll = onRequest(async (request, response) => {
-  const users = await db.collection("users").get();
+  const users = await db.collection('users').get();
   const docs = users.docs.map((r) => ({ id: r.id, ...r.data() }));
 
   const binary_15 = [
-    "IC2DFTuYg9aT9KqOEvDjI34Hk0E3",
-    "7iRezG7E6vRq7OQywQN3WawSa872",
+    'IC2DFTuYg9aT9KqOEvDjI34Hk0E3',
+    '7iRezG7E6vRq7OQywQN3WawSa872',
   ];
 
   const payroll_data = docs
     .map((docData: any) => {
       const binary_side =
-        docData.left_points > docData.right_points ? "right" : "left";
+        docData.left_points > docData.right_points ? 'right' : 'left';
       const binary_points = docData[`${binary_side}_points`];
       return {
         id: docData.id,
@@ -292,14 +398,14 @@ export const payroll = onRequest(async (request, response) => {
     }))
   );
 
-  const ref = await db.collection("payroll").add({
+  const ref = await db.collection('payroll').add({
     total_usd: payroll_data_2.reduce((a, b) => a + b.total, 0),
     total_btc: payroll_data_2.reduce((a, b) => a + b.btc_amount, 0),
     created_at: new Date(),
   });
   await Promise.all(
     payroll_data_2.map(async (doc) => {
-      await ref.collection("details").add(doc);
+      await ref.collection('details').add(doc);
       await db.collection(`users/${doc.id}/payroll`).add({
         ...doc,
         created_at: new Date(),
@@ -308,7 +414,7 @@ export const payroll = onRequest(async (request, response) => {
   );
 
   for (const doc of payroll_data_2) {
-    await db.doc("users/" + doc.id).update({
+    await db.doc('users/' + doc.id).update({
       profits: doc.profits + doc.total,
       bond_direct: 0,
       bond_direct_second_level: 0,
@@ -328,14 +434,14 @@ export const payroll = onRequest(async (request, response) => {
 });
 
 export const onConfirmSendedCoins = onRequest(async (request, response) => {
-  await db.collection("coins_sended_callbacks").add(request.body);
-  response.send("ok");
+  await db.collection('coins_sended_callbacks').add(request.body);
+  response.send('ok');
 });
 
-exports.courses = require("./courses/index");
-exports.lessons = require("./lessons/index");
-exports.categories = require("./categories/index");
-exports.users = require("./users/index");
+exports.courses = require('./courses/index');
+exports.lessons = require('./lessons/index');
+exports.categories = require('./categories/index');
+exports.users = require('./users/index');
 
 const increaseBinaryPoints = async (registerUserId: string) => {
   const batch = db.batch();
@@ -344,11 +450,11 @@ const increaseBinaryPoints = async (registerUserId: string) => {
 
   do {
     const users = await db
-      .collection("users")
+      .collection('users')
       .where(
         Filter.or(
-          Filter.where("left_binary_user_id", "==", currentUser),
-          Filter.where("right_binary_user_id", "==", currentUser)
+          Filter.where('left_binary_user_id', '==', currentUser),
+          Filter.where('right_binary_user_id', '==', currentUser)
         )
       )
       .get();
@@ -356,14 +462,14 @@ const increaseBinaryPoints = async (registerUserId: string) => {
       const user = users.docs[0];
       const userData = user.data();
       const position =
-        userData.left_binary_user_id == currentUser ? "left" : "right";
+        userData.left_binary_user_id == currentUser ? 'left' : 'right';
 
       currentUser = user.id;
 
       batch.set(
         user.ref,
         {
-          ...(position == "left"
+          ...(position == 'left'
             ? {
                 left_points: FieldValue.increment(100),
               }
@@ -387,7 +493,7 @@ const increaseBinaryPoints = async (registerUserId: string) => {
 };
 
 const execUserDirectBond = async (sponsorId: string) => {
-  const sponsorRef = await db.doc("users/" + sponsorId);
+  const sponsorRef = await db.doc('users/' + sponsorId);
   const sponsor = await sponsorRef.get().then((r) => r.data());
 
   // primer nivel
@@ -406,7 +512,7 @@ const execUserDirectBond = async (sponsorId: string) => {
 
   // segundo nivel
   if (sponsor && sponsor.sponsor_id) {
-    const sponsor2Ref = db.doc("users/" + sponsor.sponsor_id);
+    const sponsor2Ref = db.doc('users/' + sponsor.sponsor_id);
     await sponsor2Ref.set(
       {
         bond_direct_second_level: FieldValue.increment(10),
@@ -420,13 +526,13 @@ const execUserDirectBond = async (sponsorId: string) => {
 
 const calculatePositionOfBinary = async (
   sponsor_id: string,
-  position: "left" | "right"
+  position: 'left' | 'right'
 ) => {
   let parent_id = null;
 
   let next_user_id = sponsor_id;
   do {
-    const sponsorRef = db.doc("users/" + next_user_id);
+    const sponsorRef = db.doc('users/' + next_user_id);
     const sponsorData = await sponsorRef.get().then((r) => r.data());
 
     if (sponsorData[`${position}_binary_user_id`]) {
