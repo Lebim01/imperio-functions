@@ -19,7 +19,9 @@ exports.onCreateUser = functions.firestore
         left: uuidv4(),
         right: uuidv4(),
         profits: 0,
+        is_new: true, // flag nuevo usuario (cambia a false cuando se activa su paquete)
         has_scholarship: false,
+        rank: "vanguard",
 
         subscription: {
           pro: {
@@ -51,7 +53,7 @@ exports.onCreateUser = functions.firestore
         left_binary_user_id: null,
         right_binary_user_id: null,
         parent_binary_user_id: null,
-        is_new: true,
+
         // BONOS
         bond_direct: 0,
         bond_direct_second_level: 0,
