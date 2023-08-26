@@ -152,7 +152,7 @@ export const onConfirmedCoins = onRequest(async (request, response) => {
           },
         });
 
-        await cryptoapis.removeCallbackConfirmation(request.body.refereceId);
+        await cryptoapis.removeCallbackConfirmation(request.body.referenceId);
 
         const resCallback: any = await cryptoapis.createCallbackConfirmation(
           data.id,
@@ -223,7 +223,7 @@ export const onConfirmedTransaction = onRequest(async (request, response) => {
           /**
            * eliminar el evento que esta en el servicio de la wallet
            */
-          await cryptoapis.removeCallbackConfirmation(request.body.refereceId);
+          await cryptoapis.removeCallbackConfirmation(request.body.referenceId);
 
           /**
            * aumenta los puntos del binario hacia arriba

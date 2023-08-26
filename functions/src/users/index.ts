@@ -25,6 +25,7 @@ exports.onCreateUser = functions.firestore
         left_binary_user_id: null,
         right_binary_user_id: null,
         parent_binary_user_id: null,
+        is_new: true,
       };
 
       if (data.action == "calc_binary") {
@@ -33,7 +34,7 @@ exports.onCreateUser = functions.firestore
           data.position
         );
         newData.parent_binary_user_id = binaryPosition.parent_id;
-        newData.action = null
+        newData.action = null;
 
         try {
           await db
@@ -51,15 +52,18 @@ exports.onCreateUser = functions.firestore
         /**
          * se supone deberia actualizar el contador de usuarios que estan en la red
          */
-        await increaseUnderlinePeople(documentId)
+        await increaseUnderlinePeople(documentId);
       }
 
       try {
-        await db.collection('users').doc(data.sponsor_id).update({
-          count_direct_people: FieldValue.increment(1)
-        })
-      }catch(err){
-        console.error(err)
+        await db
+          .collection("users")
+          .doc(data.sponsor_id)
+          .update({
+            count_direct_people: FieldValue.increment(1),
+          });
+      } catch (err) {
+        console.error(err);
       }
 
       try {
@@ -154,4 +158,4 @@ const increaseUnderlinePeople = async (registerUserId: string) => {
       currentUser = null;
     }
   } while (currentUser);
-}
+};
