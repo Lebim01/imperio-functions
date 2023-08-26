@@ -442,6 +442,7 @@ exports.courses = require('./courses/index');
 exports.lessons = require('./lessons/index');
 exports.categories = require('./categories/index');
 exports.users = require('./users/index');
+exports.points = require('./points/index')
 
 const increaseBinaryPoints = async (registerUserId: string) => {
   const batch = db.batch();
