@@ -18,16 +18,57 @@ exports.onCreateUser = functions.firestore
         updated_at: new Date(),
         left: uuidv4(),
         right: uuidv4(),
-        balance: 0,
+        profits: 0,
+        has_scholarship: false,
+
+        subscription: {
+          pro: {
+            expires_at: null,
+            start_at: null,
+            status: null,
+          },
+          supreme: {
+            expires_at: null,
+            start_at: null,
+            status: null,
+          },
+          ibo: {
+            expires_at: null,
+            start_at: null,
+            status: null,
+          },
+        },
+
+        // CONTADORES
+        count_direct_people: 0,
+        count_underline_people: 0,
+        count_scholarship_people: 0,
+        count_direct_people_this_cycle: 0,
+
+        // BINARIOS
         left_points: 0,
         right_points: 0,
-        count_underline_people: 0,
         left_binary_user_id: null,
         right_binary_user_id: null,
         parent_binary_user_id: null,
         is_new: true,
+        // BONOS
+        bond_direct: 0,
+        bond_direct_second_level: 0,
+        bond_residual_level_1: 0,
+        bond_residual_level_2: 0,
+        bond_supreme_level_1: 0,
+        bond_supreme_level_2: 0,
+        bond_supreme_level_3: 0,
+        bond_scholarship_level_1: 0,
+        bond_scholarship_level_2: 0,
+        bond_scholarship_level_3: 0,
       };
 
+      /**
+       * Esto activa la posicion del binario
+       * Solo para cuentas registradas por el admin, estas cuentas no pagan
+       */
       if (data.action == "calc_binary") {
         const binaryPosition = await calculatePositionOfBinary(
           data.sponsor_id,
@@ -53,17 +94,6 @@ exports.onCreateUser = functions.firestore
          * se supone deberia actualizar el contador de usuarios que estan en la red
          */
         await increaseUnderlinePeople(documentId);
-      }
-
-      try {
-        await db
-          .collection("users")
-          .doc(data.sponsor_id)
-          .update({
-            count_direct_people: FieldValue.increment(1),
-          });
-      } catch (err) {
-        console.error(err);
       }
 
       try {
