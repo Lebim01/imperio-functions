@@ -7,7 +7,7 @@
     "serve:dev": "npm run build && firebase use topx-academy-dev && firebase emulators:start",
     "shell": "npm run build && firebase functions:shell",
     "start": "npm run shell",
-    "deploy:prod": "firebase use topx-academy && deploy --only functions",
+    "deploy:prod": "firebase use topx-academy && firebase deploy --only functions",
     "deploy:dev": "firebase use topx-academy-dev && firebase deploy --only functions",
     "logs": "firebase functions:log"
   },

@@ -21,6 +21,7 @@ exports.onCreateUser = functions.firestore
         profits: 0,
         is_new: true, // flag nuevo usuario (cambia a false cuando se activa su paquete)
         has_scholarship: false,
+        is_pending_complete_personal_info: true,
         rank: "vanguard",
 
         subscription: {
