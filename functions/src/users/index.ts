@@ -3,8 +3,21 @@ import * as functions from "firebase-functions";
 import { v4 as uuidv4 } from "uuid";
 import * as _ from "lodash";
 import { FieldValue, Filter, getFirestore } from "firebase-admin/firestore";
+import dayjs = require("dayjs");
+import axios from "axios";
 
 const db = getFirestore();
+
+const isStarter = (user) => {
+  const expires_at = user.get("subscription.starter.expires_at");
+  const is_admin =
+    Boolean(user.get("is_admin")) || user.get("type") == "top-lider";
+  return is_admin
+    ? true
+    : expires_at
+    ? dayjs(expires_at.seconds * 1000).isAfter(dayjs())
+    : false;
+};
 
 exports.onCreateUser = functions.firestore
   .document("users/{documentId}")
@@ -123,6 +136,19 @@ exports.onUpdateUser = functions.firestore
       if (_.isEqual(beforeData, afterData)) {
         return;
       }
+
+      if (isStarter(snapshot.after)) {
+        const profits = Number(snapshot.after.get("profits"));
+        if (profits >= 177) {
+          axios.post(
+            "https://topx-academy-nest.vercel.app/subscriptions/starterActivatePro",
+            {
+              user_id: snapshot.after.id,
+            }
+          );
+        }
+      }
+
       const newUpdateDate = {
         updated_at: new Date(),
       };
