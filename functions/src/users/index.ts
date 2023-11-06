@@ -80,6 +80,7 @@ exports.onCreateUser = functions.firestore
         bond_scholarship_level_2: 0,
         bond_scholarship_level_3: 0,
         bond_direct_starter_level_1: 0,
+        bond_starter_level_1: 0,
       };
 
       /**
