@@ -10,13 +10,7 @@ const db = getFirestore();
 
 const isStarter = (user) => {
   const expires_at = user.get("subscription.starter.expires_at");
-  const is_admin =
-    Boolean(user.get("is_admin")) || user.get("type") == "top-lider";
-  return is_admin
-    ? true
-    : expires_at
-    ? dayjs(expires_at.seconds * 1000).isAfter(dayjs())
-    : false;
+  return expires_at && dayjs(expires_at.seconds * 1000).isAfter(dayjs());
 };
 
 exports.onCreateUser = functions.firestore
@@ -147,6 +141,20 @@ exports.onUpdateUser = functions.firestore
               user_id: snapshot.after.id,
             }
           );
+        }
+      }
+
+      if (beforeData.name != afterData.name) {
+        const users = await db
+          .collection("users")
+          .where("sponsor_id", "==", documentId)
+          .get();
+        if (users.size > 0) {
+          for (const u of users.docs) {
+            await u.ref.update({
+              sponsor: afterData.name,
+            });
+          }
         }
       }
 
