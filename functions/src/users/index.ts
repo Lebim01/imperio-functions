@@ -27,8 +27,8 @@ exports.onCreateUser = functions.firestore
         count_direct_people: 0,
 
         // BONOS
-        bond_direct_level_1: 0,
-        bond_direct_level_2: 0,
+        bond_direct: 0,
+        bond_matching: 0,
       };
 
       try {
@@ -64,6 +64,47 @@ exports.onUpdateUser = functions.firestore
       } catch (e) {
         logger.info("no se crearon los campos", e);
       }
+    } catch (e) {
+      logger.info("No se asignaron los datos", e);
+    }
+  });
+
+exports.onUpdateContryUser = functions.firestore
+  .document("users/{documentId}")
+  .onWrite(async (snapshot, context) => {
+    try {
+      const documentId = context.params.documentId;
+      const beforeCountry = snapshot.before.get("country");
+      const afterCountry = snapshot.after.get("country");
+
+      if (beforeCountry == afterCountry) {
+        return;
+      }
+
+      // update country
+      const left_docs = await db
+        .collectionGroup("left-people")
+        .where("user_id", "==", documentId)
+        .get()
+        .then((r) => r.docs);
+      const right_docs = await db
+        .collectionGroup("right-people")
+        .where("user_id", "==", documentId)
+        .get()
+        .then((r) => r.docs);
+
+      const batch = db.batch();
+      for (const l of left_docs) {
+        batch.update(l.ref, {
+          country: afterCountry,
+        });
+      }
+      for (const l of right_docs) {
+        batch.update(l.ref, {
+          country: afterCountry,
+        });
+      }
+      await batch.commit();
     } catch (e) {
       logger.info("No se asignaron los datos", e);
     }
