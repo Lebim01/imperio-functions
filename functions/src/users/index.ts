@@ -29,6 +29,8 @@ exports.onCreateUser = functions.firestore
         // BONOS
         bond_direct: 0,
         bond_matching: 0,
+        bond_sentinel: 0,
+        bond_handfreex: 0
       };
 
       try {
